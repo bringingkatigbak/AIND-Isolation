@@ -85,10 +85,6 @@ def custom_score_3(game, player):
     oppMoves = len(game.get_legal_moves(game.get_opponent(player)))
     myMoves = len(game.get_legal_moves(player))
 
-    meLoc = game.get_player_location(game.active_player)
-    oppLoc = game.get_player_location(game.get_opponent(game.active_player))
-    usDist = abs(meLoc[0] - oppLoc[0]) + abs(meLoc[1] - oppLoc[1])
-
     return float(myMoves - oppMoves) / float(totalMoves)
 
 def updateBest(candidateScore, incumbentScore, candidateMove, incumbentMove, objective):
@@ -178,8 +174,6 @@ class MinimaxPlayer(IsolationPlayer):
         return bestMove if depth == self.search_depth else bestScore
 
 
-
-
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
     search with alpha-beta pruning. You must finish and test this player to
@@ -193,14 +187,12 @@ class AlphaBetaPlayer(IsolationPlayer):
             return (-1,-1)
 
         self.time_left = time_left
-        bestMove = random.choice(initialSet)
+        bestMove = None#random.choice(initialSet)
         try:
             deepening = 0;
             while True:
                 deepening += 1
-                self.search_depth = deepening # need to update search-depth for depth-limited search to work
-
-                bestMove = self.alphabeta(game, deepening)
+                bestMove = self.alphabeta(game, deepening) or bestMove
 
         except SearchTimeout:
             pass  # Handle any actions required after timeout as needed
@@ -216,7 +208,19 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         self.user = game.active_player
 
-        return self.findBest2(game, depth, "max", alpha, beta)
+        expanse = game.get_legal_moves(game.active_player)
+
+        bestScore = float("-inf")
+        bestMove = None
+        for move in expanse:
+            outcome = self.findBest2(game.forecast_move(move), depth-1, "min", alpha, beta)
+            
+            bestMove = move if outcome > bestScore else bestMove
+            bestScore = max(outcome, bestScore)
+
+            alpha = max(outcome, alpha)
+
+        return bestMove
 
 
     def findBest2(self, game, depth, objective, alpha, beta):
@@ -234,15 +238,13 @@ class AlphaBetaPlayer(IsolationPlayer):
             outcome = self.findBest2(game.forecast_move(move), depth-1, "min" if objective == "max" else "max", alpha, beta)
             if objective == "max":
                 if outcome >= beta:
-                    bestScore = beta
-                    break
+                    return outcome
                 alpha = max(outcome, alpha)
+                bestScore = max(outcome, bestScore)
             elif objective == "min":
                 if outcome <= alpha:
-                    bestScore = alpha
-                    break
+                    return outcome
                 beta = min(outcome, beta)
+                bestScore = min(outcome, bestScore)
 
-            bestScore, bestMove = updateBest(outcome, bestScore, move, bestMove, objective)
-
-        return bestMove if depth == self.search_depth else bestScore # only return a move if top-level caller
+        return bestScore
